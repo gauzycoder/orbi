@@ -1,0 +1,16 @@
+[Unit]
+Description=ORBI device agent
+After=network.target
+
+[Service]
+Type=simple
+User=alliance
+SupplementaryGroups=dialout
+EnvironmentFile=/etc/orbi-agent.env
+ExecStart=/usr/bin/python3 /opt/orbi/agent.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
