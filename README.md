@@ -39,6 +39,17 @@ Set `ORBI_URL` to the deployment URL to test it with the simulator over HTTPS.
    board package installed. Select the DevKit's board and USB port, then upload.
 2. Connect the ESP32 to the Pi with a USB data cable. On the Pi, use
    `ls -l /dev/serial/by-id/` to identify its stable device path.
+   If that directory has no entry, check `ls /dev/ttyUSB* /dev/ttyACM*` to see
+   whether the Pi detected a serial device. Use the stable path when available.
+   Run the following from the repository root on the Pi, replacing the path
+   with the detected device. Stop the ORBI agent first if it is already running.
+
+   ```sh
+   sudo python3 device/pi/agent.py --check-serial /dev/serial/by-id/your-esp32-adapter
+   ```
+
+   Expect `ESP32 replied: ORBI READY` and `ESP32 returned the matching PONG`.
+   This verifies the Pi-to-ESP32 link without internet access or cloud credentials.
 3. Copy the agent files onto the Pi and run the following from the repository
    root. The supplied service uses the existing Pi login `alliance`; edit
    `User=` if the target Pi uses a different account.
@@ -67,6 +78,9 @@ sudo journalctl -u orbi-agent -n 30
 
 Verify both devices online, send **Ping ESP32**, unplug and reconnect the ESP32,
 then reboot the Pi and check that both devices return online automatically.
+Also unplug only the ESP32 and confirm the Pi remains online. After a Pi reboot,
+verify the service is running with `systemctl is-active orbi-agent` and that both
+devices return online without starting the agent manually.
 
 ## Device interface
 
