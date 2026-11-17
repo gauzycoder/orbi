@@ -5,8 +5,9 @@ connectivity independently and verifies the full command path with a ping.
 
 ## Run locally
 
-Use Node.js 20.9 or newer. Copy `.env.example` to `.env.local` and set different
-values for `ORBI_OWNER_PASSWORD` and `ORBI_DEVICE_TOKEN`. Use strong random secrets.
+Use Node.js 20.9 or newer. Create `.env.local` on your machine and set
+`ORBI_OWNER_PASSWORD` and `ORBI_DEVICE_TOKEN` to two different, strong random values.
+Keep that file local.
 
 ```sh
 npm install
