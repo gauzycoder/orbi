@@ -66,10 +66,17 @@ class Cloud:
         self.token = token
 
     def call(self, path, body=None, jpeg=None):
+        headers = {
+            "Authorization": "Bearer " + self.token,
+            "Content-Type": "image/jpeg" if jpeg is not None else "application/json",
+        }
+        bypass = os.environ.get("ORBI_VERCEL_BYPASS_SECRET")
+        if bypass:
+            headers["x-vercel-protection-bypass"] = bypass
         request = Request(
             self.base + path,
             data=jpeg if jpeg is not None else (None if body is None else json.dumps(body).encode("utf-8")),
-            headers={"Authorization": "Bearer " + self.token, "Content-Type": "image/jpeg" if jpeg is not None else "application/json"},
+            headers=headers,
         )
         with urlopen(request, timeout=4) as response:
             return json.load(response)
