@@ -65,11 +65,11 @@ class Cloud:
         self.base = url.rstrip("/") + "/api/device/"
         self.token = token
 
-    def call(self, path, body=None):
+    def call(self, path, body=None, jpeg=None):
         request = Request(
             self.base + path,
-            data=None if body is None else json.dumps(body).encode("utf-8"),
-            headers={"Authorization": "Bearer " + self.token, "Content-Type": "application/json"},
+            data=jpeg if jpeg is not None else (None if body is None else json.dumps(body).encode("utf-8")),
+            headers={"Authorization": "Bearer " + self.token, "Content-Type": "image/jpeg" if jpeg is not None else "application/json"},
         )
         with urlopen(request, timeout=4) as response:
             return json.load(response)
@@ -115,6 +115,33 @@ def check_serial(path):
         esp32.close()
 
 
+class Camera:
+    def __init__(self, path):
+        self.path = path
+        self.last_upload = 0
+
+    def upload(self, cloud):
+        if time.monotonic() - self.last_upload < 10:
+            return
+        self.last_upload = time.monotonic()
+        import cv2
+        camera = cv2.VideoCapture(self.path, cv2.CAP_V4L2)
+        try:
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            success, frame = camera.read()
+            if not success:
+                cloud.call("camera/offline", {})
+                return
+            success, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 65])
+            if not success or len(encoded) > 160_000:
+                cloud.call("camera/offline", {})
+                return
+            cloud.call("camera", jpeg=encoded.tobytes())
+        finally:
+            camera.release()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-serial", metavar="PORT", help="Test the ESP32 over USB and exit")
@@ -124,6 +151,9 @@ def main():
         return check_serial(args.check_serial)
     cloud = Cloud(os.environ["ORBI_URL"], os.environ["ORBI_DEVICE_TOKEN"])
     esp32 = Esp32(os.environ["ORBI_SERIAL_PORT"])
+    camera = Camera(os.environ.get("ORBI_CAMERA_DEVICE", "/dev/video0")) if (
+        os.environ.get("ORBI_CAMERA_ENABLED") == "1"
+    ) else None
     results = {}
     delay = 3
     previous_connection = None
@@ -138,6 +168,11 @@ def main():
                         logging.warning("ESP32 offline on %s: %s", esp32.path, esp32.last_error)
                 previous_connection = connected
                 delay = 3
+                if camera:
+                    try:
+                        camera.upload(cloud)
+                    except Exception as error:
+                        logging.warning("Camera upload failed (%s)", type(error).__name__)
             except (OSError, ValueError) as error:
                 logging.warning("Cloud request failed (%s). Retrying in %ss.", error, delay)
                 time.sleep(delay)

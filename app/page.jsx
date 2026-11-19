@@ -4,6 +4,38 @@ import { useCallback, useEffect, useState } from "react";
 
 const clock = value => value ? new Date(value).toLocaleTimeString() : "—";
 
+function CameraPreview({ credential, camera }) {
+  const [image, setImage] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!camera?.online) return;
+    let cancelled = false;
+    let objectUrl = "";
+    fetch("/api/camera", {
+      headers: { Authorization: `Bearer ${credential}` },
+      cache: "no-store",
+    }).then(async response => {
+      if (!response.ok) throw new Error("Snapshot unavailable");
+      const blob = await response.blob();
+      if (cancelled) return;
+      objectUrl = URL.createObjectURL(blob);
+      setImage(objectUrl);
+      setError("");
+    }).catch(failure => {
+      if (!cancelled) { setImage(""); setError(failure.message); }
+    });
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [credential, camera?.online, camera?.lastSeen]);
+  return <section className="commands">
+    <div className="section-title"><h2>Camera preview</h2>
+      <span>{camera?.online ? "Online" : "Offline"}</span></div>
+    {camera?.online && image
+      ? <img className="camera-preview" src={image} alt="Latest ORBI camera snapshot" />
+      : <p>{error || "Waiting for a camera snapshot."}</p>}
+    <small>Snapshots update about every 10 seconds. Last received {clock(camera?.lastSeen)}</small>
+  </section>;
+}
+
 function Device({ name, connection, status }) {
   return <article className="device">
     <div><h2>{name}</h2><p>{connection}</p></div>
@@ -85,6 +117,7 @@ export default function Dashboard() {
         <Device name="Raspberry Pi" connection="Cloud connection" status={status.pi} />
         <Device name="ESP32" connection="USB serial via Raspberry Pi" status={status.esp32} />
       </section>
+      <CameraPreview credential={credential} camera={status.camera} />
       <section className="commands">
         <div className="section-title"><h2>Connection test</h2>
           <button disabled={busy || !status.esp32.online} onClick={sendPing}>Ping ESP32</button></div>

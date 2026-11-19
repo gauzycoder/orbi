@@ -92,3 +92,28 @@ The Pi uses its bearer token on these routes:
 - `GET /api/device/commands` to poll for pending pings.
 - `POST /api/device/commands/<id>/result` with `{"ok":true}` after an ESP32 reply
   or `{"ok":false}` after a serial failure. The API expires pings after 60 seconds.
+
+
+## Camera preview
+
+The camera preview uploads a 640 × 480 JPEG about every 10 seconds. The latest
+image replaces the previous one in private database state. The owner fetches it
+through the authenticated API. Camera bytes are excluded from the status response.
+Use the preview deployment for this branch and configure its Preview environment
+with the database settings and owner/device credentials.
+
+On the Pi, stop any old stream.py process holding the camera. Install the updated
+agent and service from this branch, then add these settings privately to
+/etc/orbi-agent.env:
+
+- ORBI_CAMERA_ENABLED=1
+- ORBI_CAMERA_DEVICE=/dev/video0
+- ORBI_URL set to the deployment URL you are testing
+
+Run sudo systemctl daemon-reload and sudo systemctl restart orbi-agent.
+The service needs the video group for camera access. No schema migration is needed.
+The original camera API remains unavailable until the updated website is deployed.
+
+Verify owner-only image access, successful ESP32 pings while snapshots update,
+camera unplug/reconnect, and both boards returning online after a reboot.
+Disable capture by removing ORBI_CAMERA_ENABLED and restarting the agent.

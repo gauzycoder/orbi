@@ -27,3 +27,5 @@ button:disabled { opacity: .5; cursor: default; }
 form { display: grid; gap: 12px; max-width: 420px; }
 input { width: 100%; background: #101416; border: 1px solid #647471; color: inherit; }
 .error { color: #ffb8a8; margin-top: 16px; }
+
+.camera-preview { display: block; width: 100%; max-height: 480px; object-fit: contain; margin: 16px 0; border-radius: 8px; background: #101416; }
